@@ -46,6 +46,7 @@ urlpatterns = [
     # API Versions
     path('api/v2/', include([
         path('', include('authentication.urls')),
+        path('bird/', include('birds.urls')),
         # Other app URLs will be added here
     ])),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
