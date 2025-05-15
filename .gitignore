@@ -1,23 +1,40 @@
- # Python
+# Django #
+*.log
+*.pot
+*.pyc
+__pycache__
+db.sqlite3
+media
+*/migrations/*
+!*/migrations/__init__.py
+
+# Python #
 *.py[cod]
-__pycache__/
+*$py.class
 *.so
-*.egg
-*.egg-info/
-dist/
+.Python
 build/
-eggs/
-parts/
-bin/
-var/
-sdist/
 develop-eggs/
-.installed.cfg
+dist/
+downloads/
+eggs/
+.eggs/
 lib/
 lib64/
-.Python
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
 *.manifest
 *.spec
+
+# Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
 
@@ -31,17 +48,18 @@ nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
-.pytest_cache/
 
-# Django
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-media/
-staticfiles/
+# Jupyter Notebook
+.ipynb_checkpoints
 
-# Virtual Environment
+# pyenv
+.python-version
+
+# celery
+celerybeat-schedule.*
+celerybeat.pid
+
+# Environment
 .env
 .venv
 env/
@@ -50,75 +68,62 @@ ENV/
 env.bak/
 venv.bak/
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-.project
-.pydevproject
-.settings
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 
-# OS
+# PyCharm
+.idea/
+
+# Sublime Text
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
+
+# sftp configuration file
+sftp-config.json
+
+# Package control specific files Package
+Control.last-run
+Control.ca-list
+Control.ca-bundle
+Control.system-ca-bundle
+GitHub.sublime-settings
+
+# AI API Keys and Configs
+api_keys.json
+config.ini
+*.key
+credentials.json
+service-account.json
+
+# Media and Static files
+media/
+static/
+uploads/
+bird_images/
+bird_sounds/
+
+# Database backups
+*.dump
+*.sql
+*.sqlite3-journal
+
+# System Files
 .DS_Store
 Thumbs.db
-*.bak
-*.tmp
 *.swp
-*~.nib
-.*.sw[a-p]
+*.swo
 
-# Project specific
-*.env
-*.env.*
-!.env.example
-celerybeat-schedule
-celerybeat.pid
-*.rdb
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Cloudinary
-cloudinary_python.txt
-
-# Logs
+# Logs and temp files
 logs/
+temp/
+*.tmp
+*.temp
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Dependencies
-node_modules/
-jspm_packages/
-bower_components/
-
-# Distribution
-dist/
-build/
-*.egg-info/
-.eggs/
-
-# Cache
-__pycache__/
-.pytest_cache/
-.mypy_cache/
-.dmypy.json
-dmypy.json
-.pyre/
-.pytype/
-
-# Database
-*.sqlite3
-*.db
-*.sql
-*.psql
-
-# Backup files
-*.bak
-*.swp
-*~
-*.orig
+*.out
