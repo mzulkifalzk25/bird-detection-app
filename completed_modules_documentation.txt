@@ -1,0 +1,153 @@
+COMPLETED MODULES DOCUMENTATION
+============================
+
+1. Authentication Module (COMPLETE)
+----------------------
+Base URL: /api/v2/
+
+a) Registration and Login:
+- POST /signup/
+  - Purpose: Register new user
+  - Request: email, password, name
+  - Response: user details, refresh token, access token
+
+- POST /login/
+  - Purpose: User login
+  - Request: email, password
+  - Response: user details, refresh token, access token
+
+- POST /token/refresh/
+  - Purpose: Refresh access token
+  - Request: refresh token
+  - Response: new access token
+
+b) Password Management:
+- POST /otp/send/
+  - Purpose: Send OTP for verification
+  - Request: email
+  - Response: success message
+
+- POST /otp/verify/
+  - Purpose: Verify OTP
+  - Request: email, otp
+  - Response: success message
+
+- POST /user/reset-password/
+  - Purpose: Reset user password
+  - Request: email, password
+  - Response: success message
+
+2. Collection Module (COMPLETE)
+------------------
+Base URL: /api/v2/
+
+a) Collection Management:
+- GET /collection/stats/
+  - Purpose: Get user's collection statistics
+  - Response: collection stats
+
+- GET /collection/bragging-rights/
+  - Purpose: Get user's bragging rights
+  - Response: bragging rights details
+
+- GET /collection/recent-activity/
+  - Purpose: Get user's recent activities
+  - Response: list of recent activities
+
+- GET /collection/categories/
+  - Purpose: Get all bird categories
+  - Response: list of bird categories
+
+- GET /collection/rarity-highlights/
+  - Purpose: Get user's rarity highlights
+  - Response: rarity score details
+
+b) Collection Search and Filter:
+- POST /collection/search/
+  - Purpose: Search user's collection
+  - Request: search parameters
+  - Response: matching collections
+
+- POST /collection/filter/
+  - Purpose: Filter user's collection
+  - Request: filter_type, filter_value
+  - Response: filtered collections
+
+c) Collection Views:
+- GET /collection/list/
+  - Purpose: Get user's complete collection
+  - Response: list of collections
+
+- GET /collection/detail/<id>/
+  - Purpose: Get specific collection details
+  - Response: collection details
+
+d) Favorites:
+- POST /collection/favorite/<bird_id>/
+  - Purpose: Toggle favorite status of a bird
+  - Response: updated favorite status
+
+- GET /collection/favorites/
+  - Purpose: Get user's favorite collections
+  - Response: list of favorite collections
+
+3. Bird Detection Module (INCOMPLETE)
+-------------------------
+Base URL: /api/v2/bird/
+
+The following APIs are implemented but pending AI integration:
+
+a) Image Processing:
+- POST /enhance/
+  - Purpose: Enhance bird image using AI
+  - Status: Partially complete (Cloudinary integration done, but AI enhancement pending)
+  - Missing: Advanced AI-based image enhancement
+
+- POST /identify/
+  - Purpose: Identify bird from image or sound
+  - Status: Structure complete, but core AI functionality pending
+  - Missing:
+    * Integration with bird recognition model
+    * Sound recognition model integration
+    * Real-time processing
+    * Accuracy improvements
+
+b) Bird Information:
+- GET /details/<int:pk>/
+  - Purpose: Get detailed bird information
+  - Status: Basic implementation done, but missing comprehensive data
+  - Missing:
+    * Complete bird database
+    * Real-time data updates
+    * Regional variations
+    * Seasonal information
+
+- GET /list/
+  - Purpose: List all birds
+  - Status: Basic implementation complete
+  - Missing:
+    * Advanced filtering
+    * Geographical filtering
+    * Seasonal filtering
+
+c) User History:
+- GET /identifications/
+  - Purpose: Get user's bird identification history
+  - Status: Basic implementation complete
+  - Missing:
+    * Advanced analytics
+    * Identification accuracy tracking
+    * Pattern recognition
+
+Note: All endpoints except registration, login, and token refresh require authentication via Bearer token.
+
+Status Summary:
+- Authentication Module: 100% Complete
+- Collection Module: 100% Complete
+- Bird Detection Module: ~40% Complete
+  * Core structure: Done
+  * API endpoints: Done
+  * Database models: Done
+  * AI Integration: Pending
+  * Real-time processing: Pending
+  * Accuracy optimization: Pending
