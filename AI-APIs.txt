@@ -4,7 +4,7 @@ Detailed Analysis of Paid vs Free Options
 ---------------------------------------
 
 1. IMAGE DETECTION APIs
-----------------------
+------------------------------------------------------------------
 
 FREE API LIMITATIONS:
 * Restricted number of API calls per day/month
