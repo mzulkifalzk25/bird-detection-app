@@ -456,25 +456,19 @@ class CollectionSearchView(generics.ListAPIView):
             bird__name__icontains=query
         )
 
-class CollectionFiltersView(generics.ListAPIView):
+class CollectionFiltersView(APIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = UserCollectionSerializer
 
-    def get_queryset(self):
-        filter_type = self.request.query_params.get('filter', '')
-        queryset = UserCollection.objects.filter(user=self.request.user)
+    def get(self, request):
+        rarity_filters = ["All", "S-Rarity", "A-Rarity", "B-Rarity", "C-Rarity"]
+        region_filters = ["Asia", "Europe", "Africa", "North America"]
+        season_filters = ["Winter", "Summer", "Spring", "Autumn"]
 
-        if filter_type == 'Rarity':
-            rarity = self.request.query_params.get('value', '')
-            return queryset.filter(bird__rarity=rarity)
-        elif filter_type == 'Region':
-            region = self.request.query_params.get('value', '')
-            return queryset.filter(bird__global_distribution__icontains=region)
-        elif filter_type == 'Season':
-            season = self.request.query_params.get('value', '')
-            return queryset.filter(bird__migration_pattern__icontains=season)
-
-        return queryset
+        return Response({
+            "rarity_filters": rarity_filters,
+            "region_filters": region_filters,
+            "season_filters": season_filters
+        })
 
 class CollectionGetAllView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
@@ -580,11 +574,11 @@ class DiscoveryLearnView(generics.ListAPIView):
     def get_queryset(self):
         filter_type = self.request.query_params.get('filter', 'All')
         queryset = Article.objects.all()
-
         if filter_type != 'All':
             queryset = queryset.filter(category=filter_type)
-
         return queryset.order_by('-published_date')
+
+
 
 class ArticleDetailsView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
@@ -621,6 +615,8 @@ class BirdSearchView(generics.ListAPIView):
     def get_queryset(self):
         query = self.request.query_params.get('query', '')
         filter_type = self.request.query_params.get('filter', '')
+        filter_value = self.request.query_params.get('value', '')
+
         queryset = Bird.objects.all()
 
         if query:
@@ -629,13 +625,11 @@ class BirdSearchView(generics.ListAPIView):
                 Q(scientific_name__icontains=query)
             )
 
-        if filter_type:
-            if filter_type == 'Rarity':
-                rarity = self.request.query_params.get('value', '')
-                queryset = queryset.filter(rarity=rarity)
-            elif filter_type == 'Region':
-                region = self.request.query_params.get('value', '')
-                queryset = queryset.filter(global_distribution__icontains=region)
+        if filter_type and filter_value:
+            if filter_type.lower() == 'rarity':
+                queryset = queryset.filter(rarity__iexact=filter_value)
+            elif filter_type.lower() == 'region':
+                queryset = queryset.filter(global_distribution__icontains=filter_value)
 
         return queryset
 
