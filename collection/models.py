@@ -33,7 +33,7 @@ class BirdCategory(models.Model):
 class CategoryBird(models.Model):
     category = models.ForeignKey(BirdCategory, on_delete=models.CASCADE)
     bird = models.ForeignKey(Bird, on_delete=models.CASCADE)
-    
+
     class Meta:
         unique_together = ['category', 'bird']
 
@@ -63,11 +63,11 @@ class UserAchievement(models.Model):
         return f"{self.user.username}'s {self.title}"
 
 class UserStreak(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='collection_streak')
     current_streak = models.IntegerField(default=0)
     longest_streak = models.IntegerField(default=0)
     last_activity_date = models.DateField(null=True, blank=True)
-    
+
     def __str__(self):
         return f"{self.user.username}'s Streak: {self.current_streak} days"
 
