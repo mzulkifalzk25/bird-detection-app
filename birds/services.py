@@ -5,8 +5,22 @@ import openai
 from django.conf import settings
 from PIL import Image
 import cloudinary.uploader
+from transformers import pipeline
 
 class BirdIdentificationService:
+    # Initialize the bird classification model
+    _bird_classifier = None
+
+    @classmethod
+    def get_bird_classifier(cls):
+        """Lazy loading of the bird classification model"""
+        if cls._bird_classifier is None:
+            cls._bird_classifier = pipeline(
+                "image-classification",
+                model="dennisjooo/Birds-Classifier-EfficientNetB2"
+            )
+        return cls._bird_classifier
+
     @staticmethod
     def enhance_image(image_file):
         """Enhance the image using Cloudinary's AI capabilities"""
@@ -22,40 +36,54 @@ class BirdIdentificationService:
 
     @staticmethod
     def identify_bird_from_image(image_file, location_name=None):
-        """Identify bird from image using Gemini Pro Vision"""
-        # Configure Gemini
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        model = genai.GenerativeModel('gemini-pro-vision')
-        
-        # Prepare the image
-        image = Image.open(image_file)
-        
-        # Create the prompt
-        location_context = f" in {location_name}" if location_name else ""
-        prompt = f"""
-        Analyze this bird image{location_context} and provide the following information in JSON format:
-        {{
-            "identified_species": "Common name of the bird",
-            "scientific_name": "Scientific name",
-            "confidence_level": "Confidence percentage (0-100)",
-            "key_features": ["List of identifying features"],
-            "similar_species": ["List of similar species"],
-            "habitat": "Typical habitat",
-            "behavior": "Notable behavior observed",
-            "additional_notes": "Any other relevant information"
-        }}
-        
-        Please be as specific as possible with the identification and ensure the response is in valid JSON format.
-        """
-        
+        """Identify bird from image using both EfficientNetB2 and Gemini Pro Vision"""
         try:
+            # First, use EfficientNetB2 for initial classification
+            image = Image.open(image_file).convert("RGB")
+            classifier = BirdIdentificationService.get_bird_classifier()
+            efficientnet_result = classifier(image)[0]
+
+            # Configure Gemini
+            genai.configure(api_key=settings.GEMINI_API_KEY)
+            model = genai.GenerativeModel('gemini-pro-vision')
+
+            # Create the prompt with EfficientNetB2 result
+            location_context = f" in {location_name}" if location_name else ""
+            prompt = f"""
+            Analyze this bird image{location_context}. The EfficientNetB2 model suggests this might be a {efficientnet_result['label']} with {efficientnet_result['score']*100:.2f}% confidence.
+
+            Please provide the following information in JSON format:
+            {{
+                "identified_species": "Common name of the bird",
+                "scientific_name": "Scientific name",
+                "confidence_level": "Confidence percentage (0-100)",
+                "key_features": ["List of identifying features"],
+                "similar_species": ["List of similar species"],
+                "habitat": "Typical habitat",
+                "behavior": "Notable behavior observed",
+                "additional_notes": "Any other relevant information",
+                "efficientnet_prediction": {{
+                    "species": "{efficientnet_result['label']}",
+                    "confidence": {efficientnet_result['score']*100:.2f}
+                }}
+            }}
+
+            Please be as specific as possible with the identification and ensure the response is in valid JSON format.
+            """
+
             response = model.generate_content([prompt, image])
             # Extract JSON from response
             json_str = response.text.strip('`').strip()
             if json_str.startswith('json'):
                 json_str = json_str[4:]
             result = json.loads(json_str)
-            
+
+            # Combine both model results
+            result['efficientnet_prediction'] = {
+                'species': efficientnet_result['label'],
+                'confidence': float(efficientnet_result['score'] * 100)
+            }
+
             return {
                 'success': True,
                 'data': result
@@ -72,16 +100,16 @@ class BirdIdentificationService:
         try:
             # First transcribe the audio using Whisper
             openai.api_key = settings.OPENAI_API_KEY
-            
+
             audio_file = open(sound_file, "rb")
             transcript = openai.Audio.transcribe("whisper-1", audio_file)
-            
+
             # Then analyze the sound pattern with GPT-4
             location_context = f" recorded in {location_name}" if location_name else ""
             prompt = f"""
             Analyze this bird sound transcription and pattern{location_context}:
             {transcript.text}
-            
+
             Please provide the information in the following JSON format:
             {{
                 "identified_species": "Common name of the bird",
@@ -93,7 +121,7 @@ class BirdIdentificationService:
                 "additional_notes": "Any other relevant information"
             }}
             """
-            
+
             response = openai.ChatCompletion.create(
                 model="gpt-4",
                 messages=[
@@ -101,9 +129,9 @@ class BirdIdentificationService:
                     {"role": "user", "content": prompt}
                 ]
             )
-            
+
             result = json.loads(response.choices[0].message.content)
-            
+
             return {
                 'success': True,
                 'data': result
@@ -120,7 +148,7 @@ class BirdIdentificationService:
         try:
             genai.configure(api_key=settings.GEMINI_API_KEY)
             model = genai.GenerativeModel('gemini-pro')
-            
+
             prompt = f"""
             Provide detailed information about the bird species "{bird_name}" in the following JSON format:
             {{
@@ -144,13 +172,13 @@ class BirdIdentificationService:
                 "conservation_status": "Current conservation status",
                 "interesting_facts": ["Array of interesting facts"]
             }}
-            
+
             Please ensure the response is in valid JSON format and all information is accurate.
             """
-            
+
             response = model.generate_content(prompt)
             result = json.loads(response.text.strip('`').strip())
-            
+
             return {
                 'success': True,
                 'data': result
@@ -159,4 +187,4 @@ class BirdIdentificationService:
             return {
                 'success': False,
                 'error': str(e)
-            } 
+            }

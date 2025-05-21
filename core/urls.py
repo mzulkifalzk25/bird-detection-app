@@ -41,6 +41,7 @@ urlpatterns = [
     path('api/v2/', include([
         path('', include('authentication.urls')),
         path('', include('birds.urls')),
+        path('subscription/', include('subscription.urls')),
     ])),
 
     # API documentation
