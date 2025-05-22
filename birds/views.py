@@ -4,158 +4,352 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from .models import Bird, BirdIdentification
+from .models import (
+    Bird, BirdIdentification, BirdImage, BirdSound, BirdCategory,
+    BirdCategoryAssignment, Article, UserBookmark, AIChat
+)
+from collection.models import UserCollection, UserStreak
+from recent_activity.models import UserActivity
+from nearby.models import NearbySpot, SpotBirdSighting
 from .serializers import (
     BirdDetailSerializer, BirdListSerializer, BirdIdentificationSerializer,
-    ImageEnhancementSerializer, BirdIdentificationRequestSerializer
-)
-from .services import BirdIdentificationService
-from django.db.models import Count, Q
-from django.utils import timezone
-from datetime import timedelta
-from .models import (
-    BirdImage, BirdSound, BirdCategory, Article, UserCollection,
-    UserActivity, UserStreak, UserBookmark, AIChat, NearbySpot, SpotBirdSighting
-)
-from .serializers import (
+    ImageEnhancementSerializer, BirdIdentificationRequestSerializer,
     BirdSerializer, BirdImageSerializer, BirdSoundSerializer,
     BirdCategorySerializer, ArticleSerializer, UserCollectionSerializer,
     UserActivitySerializer, UserStreakSerializer, UserBookmarkSerializer,
     CollectionStatsSerializer, BraggingRightsSerializer, NearbySpotSerializer,
     SpotBirdSightingSerializer
 )
+from .services import BirdIdentificationService
+from django.db.models import Count, Q
+from django.utils import timezone
+from datetime import timedelta
+from core.views import BaseAPIView
+from rest_framework.exceptions import ValidationError
+import cloudinary
+import cloudinary.uploader
+import google.generativeai as genai
+from django.conf import settings
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from rest_framework.generics import (
+    ListAPIView,
+    RetrieveAPIView,
+    CreateAPIView,
+    UpdateAPIView,
+    DestroyAPIView,
+)
 
 # Create your views here.
 
-class EnhanceImageView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        """Enhance bird image using AI"""
-        serializer = ImageEnhancementSerializer(data=request.data)
-        if serializer.is_valid():
-            try:
-                enhanced_url = BirdIdentificationService.enhance_image(
-                    serializer.validated_data['image']
-                )
-                return Response({'enhanced_image_url': enhanced_url})
-            except Exception as e:
-                return Response(
-                    {'error': str(e)},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-class IdentifyBirdView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        """Identify bird from image or sound"""
-        serializer = BirdIdentificationRequestSerializer(data=request.data)
-        if serializer.is_valid():
-            try:
-                data = serializer.validated_data
-
-                # Handle image identification
-                if 'image' in data:
-                    result = BirdIdentificationService.identify_bird_from_image(
-                        data['image'],
-                        data.get('location_name')
-                    )
-                # Handle sound identification
-                elif 'sound' in data:
-                    result = BirdIdentificationService.identify_bird_from_sound(
-                        data['sound'],
-                        data.get('location_name')
-                    )
-                else:
-                    return Response(
-                        {'error': 'Either image or sound must be provided'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
-                if not result['success']:
-                    return Response(
-                        {'error': result['error']},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                    )
-
-                # Get or create bird in database
-                bird_data = result['data']
-                bird, _ = Bird.objects.get_or_create(
-                    name=bird_data['identified_species'],
-                    defaults={
-                        'scientific_name': bird_data['scientific_name'],
-                        # Add other fields as needed
+class EnhanceImageView(BaseAPIView):
+    @swagger_auto_schema(
+        operation_description="Enhance a bird image using AI",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['image'],
+            properties={
+                'image': openapi.Schema(type=openapi.TYPE_STRING, format='binary', description='Bird image file'),
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                description="Image enhanced successfully",
+                examples={
+                    "application/json": {
+                        "enhanced_image_url": "https://example.com/enhanced_image.jpg"
                     }
+                }
+            ),
+            400: "Bad Request - Invalid image file",
+            401: "Unauthorized - Authentication credentials were not provided"
+        }
+    )
+    def post(self, request):
+        try:
+            serializer = ImageEnhancementSerializer(data=request.data)
+            if not serializer.is_valid():
+                raise ValidationError(serializer.errors)
+
+            image_data = serializer.validated_data['image']
+
+            # Upload to Cloudinary
+            result = cloudinary.uploader.upload(
+                image_data,
+                folder="bird_images",
+                transformation=[
+                    {'quality': 'auto:best'},
+                    {'fetch_format': 'auto'}
+                ]
+            )
+
+            return Response({
+                'enhanced_image_url': result['secure_url']
+            })
+        except Exception as e:
+            raise ValidationError(str(e))
+
+class IdentifyBirdView(BaseAPIView):
+    @swagger_auto_schema(
+        operation_description="Identify a bird from image or sound using AI",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['identification_type'],
+            properties={
+                'identification_type': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    enum=['image', 'sound'],
+                    description='Type of identification'
+                ),
+                'image': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format='binary',
+                    description='Bird image file (required for image identification)'
+                ),
+                'sound': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format='binary',
+                    description='Bird sound file (required for sound identification)'
+                ),
+            },
+            example={
+                'identification_type': 'image',
+                'image': '(binary file)'
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                description="Bird identified successfully",
+                examples={
+                    "application/json": {
+                        "id": 1,
+                        "bird": {
+                            "id": 1,
+                            "name": "Northern Cardinal",
+                            "scientific_name": "Cardinalis cardinalis"
+                        },
+                        "identification_type": "image",
+                        "media_url": "https://example.com/bird_image.jpg",
+                        "confidence_score": 0.95
+                    }
+                }
+            ),
+            400: "Bad Request - Invalid input data",
+            401: "Unauthorized - Authentication credentials were not provided"
+        }
+    )
+    def post(self, request):
+        try:
+            serializer = BirdIdentificationRequestSerializer(data=request.data)
+            if not serializer.is_valid():
+                raise ValidationError(serializer.errors)
+
+            data = serializer.validated_data
+            identification_type = data.get('identification_type')
+
+            if identification_type == 'image':
+                # Handle image identification
+                image_data = data.get('image')
+                if not image_data:
+                    raise ValidationError("Image is required for image identification")
+
+                # Upload to Cloudinary
+                result = cloudinary.uploader.upload(
+                    image_data,
+                    folder="bird_identifications",
+                    transformation=[
+                        {'quality': 'auto:best'},
+                        {'fetch_format': 'auto'}
+                    ]
                 )
 
-                # Create identification record
-                identification = BirdIdentification.objects.create(
-                    user=request.user,
-                    bird=bird,
-                    image_url=data.get('image_url', ''),
-                    sound_url=data.get('sound_url', ''),
-                    identified_species=bird_data['identified_species'],
-                    confidence_level=float(bird_data['confidence_level']),
-                    ai_response=bird_data,
-                    latitude=data.get('latitude'),
-                    longitude=data.get('longitude'),
-                    location_name=data.get('location_name', '')
+                # Use Google's Gemini API for identification
+                genai.configure(api_key=settings.GEMINI_API_KEY)
+                model = genai.GenerativeModel('gemini-pro-vision')
+
+                response = model.generate_content([
+                    "Identify this bird species. Return only the scientific name.",
+                    result['secure_url']
+                ])
+
+                bird_name = response.text.strip()
+
+            elif identification_type == 'sound':
+                # Handle sound identification
+                sound_data = data.get('sound')
+                if not sound_data:
+                    raise ValidationError("Sound file is required for sound identification")
+
+                # Upload to Cloudinary
+                result = cloudinary.uploader.upload(
+                    sound_data,
+                    folder="bird_sounds",
+                    resource_type="video"
                 )
 
-                return Response(BirdIdentificationSerializer(identification).data)
+                # Use Google's Gemini API for sound identification
+                genai.configure(api_key=settings.GEMINI_API_KEY)
+                model = genai.GenerativeModel('gemini-pro')
 
-            except Exception as e:
-                return Response(
-                    {'error': str(e)},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                response = model.generate_content(
+                    f"Identify this bird species from its sound. Return only the scientific name. Sound URL: {result['secure_url']}"
                 )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class BirdDetailView(generics.RetrieveAPIView):
+                bird_name = response.text.strip()
+
+            else:
+                raise ValidationError("Invalid identification type")
+
+            # Find or create bird
+            bird, created = Bird.objects.get_or_create(
+                scientific_name=bird_name,
+                defaults={
+                    'name': bird_name,  # You might want to get a common name from an API
+                    'description': 'Automatically identified bird'
+                }
+            )
+
+            # Create identification record
+            identification = BirdIdentification.objects.create(
+                user=request.user,
+                bird=bird,
+                identification_type=identification_type,
+                media_url=result['secure_url'],
+                confidence_score=0.8  # You might want to get this from the AI model
+            )
+
+            return Response(BirdIdentificationSerializer(identification).data)
+
+        except Exception as e:
+            raise ValidationError(str(e))
+
+class BirdDetailView(RetrieveAPIView):
+    serializer_class = BirdSerializer
     permission_classes = [IsAuthenticated]
-    queryset = Bird.objects.all()
-    serializer_class = BirdDetailSerializer
-
-    def get(self, request, *args, **kwargs):
-        """Get detailed information about a bird"""
-        instance = self.get_object()
-
-        # If we don't have complete information, fetch from AI
-        if not instance.description or not instance.habitat:
-            try:
-                result = BirdIdentificationService.get_bird_details_from_ai(instance.name)
-                if result['success']:
-                    bird_data = result['data']
-                    # Update bird information
-                    for field, value in bird_data.items():
-                        if hasattr(instance, field) and not getattr(instance, field):
-                            setattr(instance, field, value)
-                    instance.save()
-            except Exception as e:
-                # Continue even if AI call fails
-                pass
-
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
-
-class BirdListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-    queryset = Bird.objects.all()
-    serializer_class = BirdListSerializer
-    filterset_fields = ['name', 'scientific_name', 'rarity']
-    search_fields = ['name', 'scientific_name', 'description']
-    ordering_fields = ['name', 'rarity', 'created_at']
-    ordering = ['-created_at']
-
-class UserBirdIdentificationsView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = BirdIdentificationSerializer
+    @swagger_auto_schema(
+        operation_description="Get detailed information about a specific bird",
+        responses={
+            200: openapi.Response(
+                description="Bird details retrieved successfully",
+                examples={
+                    "application/json": {
+                        "id": 1,
+                        "name": "Northern Cardinal",
+                        "scientific_name": "Cardinalis cardinalis",
+                        "description": "A medium-sized songbird...",
+                        "image_url": "https://example.com/cardinal.jpg",
+                        "sound_url": "https://example.com/cardinal.mp3",
+                        "rarity": "common",
+                        "habitat": "Woodlands, gardens, and shrublands",
+                        "diet": "Seeds, fruits, and insects"
+                    }
+                }
+            ),
+            404: "Not Found - Bird does not exist",
+            401: "Unauthorized - Authentication credentials were not provided"
+        }
+    )
 
     def get_queryset(self):
-        """Get all bird identifications for the current user"""
-        return BirdIdentification.objects.filter(user=self.request.user)
+        return Bird.objects.all()
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+
+            # If bird details are incomplete, fetch from external API
+            if not instance.description or not instance.image_url:
+                # Use Google's Gemini API to get more information
+                genai.configure(api_key=settings.GEMINI_API_KEY)
+                model = genai.GenerativeModel('gemini-pro')
+
+                response = model.generate_content(
+                    f"Provide detailed information about the bird species {instance.scientific_name}. Include description, habitat, and behavior."
+                )
+
+                # Update bird details
+                instance.description = response.text
+                instance.save()
+
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+        except Exception as e:
+            raise ValidationError(str(e))
+
+class BirdListView(ListAPIView):
+    serializer_class = BirdSerializer
+    permission_classes = [IsAuthenticated]
+    @swagger_auto_schema(
+        operation_description="List all birds with optional filtering",
+        manual_parameters=[
+            openapi.Parameter(
+                'search',
+                openapi.IN_QUERY,
+                description="Search birds by name or scientific name",
+                type=openapi.TYPE_STRING
+            ),
+            openapi.Parameter(
+                'rarity',
+                openapi.IN_QUERY,
+                description="Filter by rarity (common, uncommon, rare, very_rare)",
+                type=openapi.TYPE_STRING,
+                enum=['common', 'uncommon', 'rare', 'very_rare']
+            )
+        ],
+        responses={
+            200: openapi.Response(
+                description="List of birds retrieved successfully",
+                examples={
+                    "application/json": {
+                        "count": 2,
+                        "results": [
+                            {
+                                "id": 1,
+                                "name": "Northern Cardinal",
+                                "scientific_name": "Cardinalis cardinalis",
+                                "rarity": "common"
+                            },
+                            {
+                                "id": 2,
+                                "name": "Blue Jay",
+                                "scientific_name": "Cyanocitta cristata",
+                                "rarity": "common"
+                            }
+                        ]
+                    }
+                }
+            ),
+            401: "Unauthorized - Authentication credentials were not provided"
+        }
+    )
+
+    def get_queryset(self):
+        try:
+            queryset = Bird.objects.all()
+
+            # Filter by name or scientific name
+            search = self.request.query_params.get('search')
+            if search:
+                queryset = queryset.filter(
+                    Q(name__icontains=search) |
+                    Q(scientific_name__icontains=search)
+                )
+
+            # Filter by rarity
+            rarity = self.request.query_params.get('rarity')
+            if rarity:
+                queryset = queryset.filter(rarity=rarity)
+
+            return queryset.order_by('name')
+        except Exception as e:
+            raise ValidationError(str(e))
+
+class UserBirdIdentificationsView(ListAPIView):
+    serializer_class = BirdIdentificationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return BirdIdentification.objects.filter(user=self.request.user).order_by('-created_at')
 
 class UserCollectionStatsView(APIView):
     permission_classes = [IsAuthenticated]

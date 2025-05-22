@@ -26,10 +26,10 @@ class BirdIdentificationService:
         # Configure Gemini
         genai.configure(api_key=settings.GEMINI_API_KEY)
         model = genai.GenerativeModel('gemini-pro-vision')
-        
+
         # Prepare the image
         image = Image.open(image_file)
-        
+
         # Create the prompt
         location_context = f" in {location_name}" if location_name else ""
         prompt = f"""
@@ -44,10 +44,10 @@ class BirdIdentificationService:
             "behavior": "Notable behavior observed",
             "additional_notes": "Any other relevant information"
         }}
-        
+
         Please be as specific as possible with the identification and ensure the response is in valid JSON format.
         """
-        
+
         try:
             response = model.generate_content([prompt, image])
             # Extract JSON from response
@@ -55,7 +55,7 @@ class BirdIdentificationService:
             if json_str.startswith('json'):
                 json_str = json_str[4:]
             result = json.loads(json_str)
-            
+
             return {
                 'success': True,
                 'data': result
@@ -72,16 +72,16 @@ class BirdIdentificationService:
         try:
             # First transcribe the audio using Whisper
             openai.api_key = settings.OPENAI_API_KEY
-            
+
             audio_file = open(sound_file, "rb")
             transcript = openai.Audio.transcribe("whisper-1", audio_file)
-            
+
             # Then analyze the sound pattern with GPT-4
             location_context = f" recorded in {location_name}" if location_name else ""
             prompt = f"""
             Analyze this bird sound transcription and pattern{location_context}:
             {transcript.text}
-            
+
             Please provide the information in the following JSON format:
             {{
                 "identified_species": "Common name of the bird",
@@ -93,7 +93,7 @@ class BirdIdentificationService:
                 "additional_notes": "Any other relevant information"
             }}
             """
-            
+
             response = openai.ChatCompletion.create(
                 model="gpt-4",
                 messages=[
@@ -101,9 +101,9 @@ class BirdIdentificationService:
                     {"role": "user", "content": prompt}
                 ]
             )
-            
+
             result = json.loads(response.choices[0].message.content)
-            
+
             return {
                 'success': True,
                 'data': result
@@ -120,7 +120,7 @@ class BirdIdentificationService:
         try:
             genai.configure(api_key=settings.GEMINI_API_KEY)
             model = genai.GenerativeModel('gemini-pro')
-            
+
             prompt = f"""
             Provide detailed information about the bird species "{bird_name}" in the following JSON format:
             {{
@@ -144,13 +144,13 @@ class BirdIdentificationService:
                 "conservation_status": "Current conservation status",
                 "interesting_facts": ["Array of interesting facts"]
             }}
-            
+
             Please ensure the response is in valid JSON format and all information is accurate.
             """
-            
+
             response = model.generate_content(prompt)
             result = json.loads(response.text.strip('`').strip())
-            
+
             return {
                 'success': True,
                 'data': result
@@ -159,4 +159,4 @@ class BirdIdentificationService:
             return {
                 'success': False,
                 'error': str(e)
-            } 
+            }

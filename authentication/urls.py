@@ -1,20 +1,28 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
-    RegisterView, LoginView, GoogleSignupView, AppleSignupView,
-    SendOTPView, VerifyOTPView, ResetPasswordView, EditProfileView
+    UserRegistrationView,
+    UserLoginView,
+    UserProfileView,
+    UserLogoutView,
+    # GoogleSignupView,
+    # GoogleLoginView,
+    # AppleSignupView,
+    # AppleLoginView,
+    ResetPasswordView,
 )
 
 app_name = 'authentication'
 
 urlpatterns = [
-    path('signup/', RegisterView.as_view(), name='register'),
-    path('login/', LoginView.as_view(), name='login'),
+    path('register/', UserRegistrationView.as_view(), name='register'),
+    path('login/', UserLoginView.as_view(), name='login'),
+    path('profile/', UserProfileView.as_view(), name='profile'),
+    path('logout/', UserLogoutView.as_view(), name='logout'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('google-signup/', GoogleSignupView.as_view(), name='google_signup'),
-    path('apple-signup/', AppleSignupView.as_view(), name='apple_signup'),
-    path('otp/send/', SendOTPView.as_view(), name='send_otp'),
-    path('otp/verify/', VerifyOTPView.as_view(), name='verify_otp'),
-    path('user/reset-password/', ResetPasswordView.as_view(), name='reset_password'),
-    path('user/edit-profile/', EditProfileView.as_view(), name='edit_profile'),
-] 
+    # path('google/signup/', GoogleSignupView.as_view(), name='google_signup'),
+    # path('google/login/', GoogleLoginView.as_view(), name='google_login'),
+    # path('apple/signup/', AppleSignupView.as_view(), name='apple_signup'),
+    # path('apple/login/', AppleLoginView.as_view(), name='apple_login'),
+    path('reset-password/', ResetPasswordView.as_view(), name='reset_password'),
+]
