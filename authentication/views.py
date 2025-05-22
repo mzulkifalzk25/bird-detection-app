@@ -24,10 +24,16 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
 
     def create(self, request, *args, **kwargs):
+        print(" Incoming signup data:", request.data)  
+
         serializer = self.get_serializer(data=request.data)
+
+        if not serializer.is_valid():
+         print(" Validation errors:", serializer.errors)  
+
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        
+
         refresh = RefreshToken.for_user(user)
         return Response({
             'user': UserSerializer(user).data,
