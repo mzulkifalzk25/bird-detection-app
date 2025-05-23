@@ -205,7 +205,7 @@ REST_FRAMEWORK = {
 # JWT Settings
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=2),
 }
 
 # CORS settings
@@ -264,3 +264,9 @@ schema_view = get_schema_view(
     public=True,
     permission_classes=(permissions.AllowAny,),
 )
+
+# Authentication backends
+AUTHENTICATION_BACKENDS = [
+    'authentication.backends.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]

@@ -1,0 +1,1472 @@
+{
+    "info": {
+        "_postman_id": "your-collection-id",
+        "name": "Bird Detection API",
+        "description": "Collection of all Bird Detection APIs",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Login",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"your.email@example.com\",\n    \"password\": \"your_password\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/auth/login/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "login",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Register",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"your.email@example.com\",\n    \"password\": \"your_password\",\n    \"username\": \"your_username\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/auth/register/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "register",
+                                ""
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Bird Identification",
+            "item": [
+                {
+                    "name": "Identify Bird",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "identification_type",
+                                    "value": "image",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "image",
+                                    "type": "file",
+                                    "src": "/path/to/your/image.jpg"
+                                },
+                                {
+                                    "key": "latitude",
+                                    "value": "40.7128",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "longitude",
+                                    "value": "-74.0060",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "location_name",
+                                    "value": "New York",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/birds/identify/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "birds",
+                                "identify",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Enhance Bird Image",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "image",
+                                    "type": "file",
+                                    "src": "/path/to/your/image.jpg"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/birds/enhance-image/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "birds",
+                                "enhance-image",
+                                ""
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Bird Information",
+            "item": [
+                {
+                    "name": "Get Bird Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/birds/details/1/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "birds",
+                                "details",
+                                "1",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Birds",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/birds/list/?search=cardinal&rarity=common",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "birds",
+                                "list",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "search",
+                                    "value": "cardinal"
+                                },
+                                {
+                                    "key": "rarity",
+                                    "value": "common"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "User Bird Identifications",
+            "item": [
+                {
+                    "name": "Get User's Bird Identifications",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/birds/identifications/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "birds",
+                                "identifications",
+                                ""
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Bird Brain AI",
+            "item": [
+                {
+                    "name": "Ask Bird Brain",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"date\": \"2024-03-20\",\n    \"location\": \"New York\",\n    \"color\": \"red\",\n    \"size\": \"medium\",\n    \"behavior\": \"feeding\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/birds/birdbrain/ask/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "birds",
+                                "birdbrain",
+                                "ask",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Search Birds by Location",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/birds/birdbrain/search-location/?location=New%20York",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "birds",
+                                "birdbrain",
+                                "search-location",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "location",
+                                    "value": "New York"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Bird Search and Categories",
+            "item": [
+                {
+                    "name": "Search Birds",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/birds/search/?query=cardinal&filter=rarity&value=common",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "birds",
+                                "search",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "query",
+                                    "value": "cardinal"
+                                },
+                                {
+                                    "key": "filter",
+                                    "value": "rarity"
+                                },
+                                {
+                                    "key": "value",
+                                    "value": "common"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Common Feeder Birds",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/birds/common-feeder/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "birds",
+                                "common-feeder",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Birds by Category",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/birds/by-category/?category=Songbirds",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "birds",
+                                "by-category",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "category",
+                                    "value": "Songbirds"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Collection",
+            "item": [
+                {
+                    "name": "Get Collection Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/collection/stats/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "collection",
+                                "stats",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Bragging Rights",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/collection/bragging-rights/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "collection",
+                                "bragging-rights",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Bird Categories",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/collection/bird-categories/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "collection",
+                                "bird-categories",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Rarity Highlights",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/collection/rarity-highlights/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "collection",
+                                "rarity-highlights",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Search Collections",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/collection/search/?query=cardinal",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "collection",
+                                "search",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "query",
+                                    "value": "cardinal"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Collection Filters",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/collection/filters/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "collection",
+                                "filters",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Collections",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/collection/get-all/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "collection",
+                                "get-all",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Collection Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/collection/details/1/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "collection",
+                                "details",
+                                "1",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Favorite Collection",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"collection_id\": 1\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/collection/favorite/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "collection",
+                                "favorite",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Favorites",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/collection/favorites/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "collection",
+                                "favorites",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Collection",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"My Collection\",\n    \"description\": \"A collection of birds\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/collection/create/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "collection",
+                                "create",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Collection Detail",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/collection/1/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "collection",
+                                "1",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Streak",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"streak_type\": \"daily\",\n    \"streak_count\": 1\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/collection/streak/create/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "collection",
+                                "streak",
+                                "create",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Streak Detail",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/collection/streak/1/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "collection",
+                                "streak",
+                                "1",
+                                ""
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Discover",
+            "item": [
+                {
+                    "name": "Bookmark Article",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"article_id\": 1\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/discover/user/bookmark/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "discover",
+                                "user",
+                                "bookmark",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Bookmarked Articles",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/discover/user/bookmarked-articles/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "discover",
+                                "user",
+                                "bookmarked-articles",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Discovery Learn",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/discover/user/discovery-learn/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "discover",
+                                "user",
+                                "discovery-learn",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Article Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/discover/user/article-details/1/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "discover",
+                                "user",
+                                "article-details",
+                                "1",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Article",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"title\": \"New Article\",\n    \"content\": \"Article content\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/discover/user/articles/create/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "discover",
+                                "user",
+                                "articles",
+                                "create",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Article Detail",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/discover/user/articles/1/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "discover",
+                                "user",
+                                "articles",
+                                "1",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Bookmark",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"article_id\": 1\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/discover/user/bookmarks/create/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "discover",
+                                "user",
+                                "bookmarks",
+                                "create",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Bookmark Detail",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/discover/user/bookmarks/1/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "discover",
+                                "user",
+                                "bookmarks",
+                                "1",
+                                ""
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Nearby",
+            "item": [
+                {
+                    "name": "Get Nearby Spots",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/nearby/user/nearby-spots/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "nearby",
+                                "user",
+                                "nearby-spots",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Nearby Bird List",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/nearby/user/nearby-bird-list/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "nearby",
+                                "user",
+                                "nearby-bird-list",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Nearby Bird Activity",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/nearby/user/nearby-bird-activity/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "nearby",
+                                "user",
+                                "nearby-bird-activity",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Search Nearby Bird Activity",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/nearby/user/nearby-bird-activity/search/?query=cardinal",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "nearby",
+                                "user",
+                                "nearby-bird-activity",
+                                "search",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "query",
+                                    "value": "cardinal"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "View All Nearby Bird Activity",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/nearby/user/nearby-bird-activity/view-all/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "nearby",
+                                "user",
+                                "nearby-bird-activity",
+                                "view-all",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Nearby Spot",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Central Park\",\n    \"latitude\": 40.7128,\n    \"longitude\": -74.0060\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/nearby/user/nearby-spots/create/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "nearby",
+                                "user",
+                                "nearby-spots",
+                                "create",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Nearby Spot Detail",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/nearby/user/nearby-spots/1/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "nearby",
+                                "user",
+                                "nearby-spots",
+                                "1",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Nearby Sighting",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"spot_id\": 1,\n    \"bird_id\": 1,\n    \"sighting_date\": \"2024-03-20\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/nearby/user/nearby-sightings/create/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "nearby",
+                                "user",
+                                "nearby-sightings",
+                                "create",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Nearby Sighting Detail",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/nearby/user/nearby-sightings/1/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "nearby",
+                                "user",
+                                "nearby-sightings",
+                                "1",
+                                ""
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Recent Activity",
+            "item": [
+                {
+                    "name": "Get Recent Activity",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/recent-activity/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "recent-activity",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Recent Activity",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/recent-activity/all/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "recent-activity",
+                                "all",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Search Recent Activity",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/recent-activity/search/?query=cardinal",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "recent-activity",
+                                "search",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "query",
+                                    "value": "cardinal"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Recent Activities",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/recent-activity/recent/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "recent-activity",
+                                "recent",
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Search Recent Activities",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v2/recent-activity/recent/search/?query=cardinal",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v2",
+                                "recent-activity",
+                                "recent",
+                                "search",
+                                ""
+                            ],
+                            "query": [
+                                {
+                                    "key": "query",
+                                    "value": "cardinal"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "localhost:8000"
+        },
+        {
+            "key": "access_token",
+            "value": "your_access_token_here"
+        }
+    ]
+}

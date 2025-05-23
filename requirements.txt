@@ -15,8 +15,8 @@ social-auth-core==4.5.1
 
 # Payment Processing
 stripe==7.11.0
-django-stripe-payments==0.1.0
-django-stripe-subscription==0.1.0
+django-stripe-payments==2.0.0
+# django-stripe-subscription==0.1.0
 
 # AI & ML
 google-generativeai==0.3.2
@@ -32,7 +32,7 @@ torchvision==0.17.0
 # Image Processing
 Pillow==10.2.0
 python-magic==0.4.27
-python-magic-bin==0.4.14
+# python-magic-bin==0.4.14
 
 # Storage & Media
 django-storages==1.14.2

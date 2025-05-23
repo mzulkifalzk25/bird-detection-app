@@ -3,6 +3,7 @@ from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.shortcuts import get_object_or_404
 from .models import (
     Bird, BirdIdentification, BirdImage, BirdSound, BirdCategory,
@@ -39,10 +40,18 @@ from rest_framework.generics import (
     UpdateAPIView,
     DestroyAPIView,
 )
+from PIL import Image
+from transformers import pipeline
+import tempfile
+import os
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
 # Create your views here.
 
 class EnhanceImageView(BaseAPIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_description="Enhance a bird image using AI",
         request_body=openapi.Schema(
@@ -90,54 +99,9 @@ class EnhanceImageView(BaseAPIView):
             raise ValidationError(str(e))
 
 class IdentifyBirdView(BaseAPIView):
-    @swagger_auto_schema(
-        operation_description="Identify a bird from image or sound using AI",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['identification_type'],
-            properties={
-                'identification_type': openapi.Schema(
-                    type=openapi.TYPE_STRING,
-                    enum=['image', 'sound'],
-                    description='Type of identification'
-                ),
-                'image': openapi.Schema(
-                    type=openapi.TYPE_STRING,
-                    format='binary',
-                    description='Bird image file (required for image identification)'
-                ),
-                'sound': openapi.Schema(
-                    type=openapi.TYPE_STRING,
-                    format='binary',
-                    description='Bird sound file (required for sound identification)'
-                ),
-            },
-            example={
-                'identification_type': 'image',
-                'image': '(binary file)'
-            }
-        ),
-        responses={
-            200: openapi.Response(
-                description="Bird identified successfully",
-                examples={
-                    "application/json": {
-                        "id": 1,
-                        "bird": {
-                            "id": 1,
-                            "name": "Northern Cardinal",
-                            "scientific_name": "Cardinalis cardinalis"
-                        },
-                        "identification_type": "image",
-                        "media_url": "https://example.com/bird_image.jpg",
-                        "confidence_score": 0.95
-                    }
-                }
-            ),
-            400: "Bad Request - Invalid input data",
-            401: "Unauthorized - Authentication credentials were not provided"
-        }
-    )
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         try:
             serializer = BirdIdentificationRequestSerializer(data=request.data)
@@ -147,32 +111,40 @@ class IdentifyBirdView(BaseAPIView):
             data = serializer.validated_data
             identification_type = data.get('identification_type')
 
-            if identification_type == 'image':
+            image_url = ''
+            sound_url = ''
+
+            if identification_type == 'image' or (not identification_type and data.get('image')):
                 # Handle image identification
                 image_data = data.get('image')
                 if not image_data:
                     raise ValidationError("Image is required for image identification")
 
-                # Upload to Cloudinary
-                result = cloudinary.uploader.upload(
-                    image_data,
-                    folder="bird_identifications",
-                    transformation=[
-                        {'quality': 'auto:best'},
-                        {'fetch_format': 'auto'}
-                    ]
-                )
+                # Save the uploaded image to MEDIA_ROOT/bird_identifications/
+                image_dir = os.path.join('bird_identifications')
+                image_name = default_storage.save(os.path.join(image_dir, image_data.name), ContentFile(image_data.read()))
+                image_url = settings.MEDIA_URL + image_name
 
-                # Use Google's Gemini API for identification
-                genai.configure(api_key=settings.GEMINI_API_KEY)
-                model = genai.GenerativeModel('gemini-pro-vision')
+                # Reset file pointer before reading again
+                image_data.seek(0)
 
-                response = model.generate_content([
-                    "Identify this bird species. Return only the scientific name.",
-                    result['secure_url']
-                ])
+                # Open the image for classification
+                from PIL import Image
+                from transformers import pipeline
+                import tempfile
 
-                bird_name = response.text.strip()
+                with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as temp_img_file:
+                    temp_img_file.write(image_data.read())
+                    temp_img_path = temp_img_file.name
+
+                img = Image.open(temp_img_path).convert("RGB")
+                pipe = pipeline("image-classification", model="dennisjooo/Birds-Classifier-EfficientNetB2")
+                result = pipe(img)[0]
+                os.remove(temp_img_path)
+
+                bird_name = result['label']
+                confidence = float(result.get('score', 0.8)) * 100
+                ai_response = result
 
             elif identification_type == 'sound':
                 # Handle sound identification
@@ -180,22 +152,20 @@ class IdentifyBirdView(BaseAPIView):
                 if not sound_data:
                     raise ValidationError("Sound file is required for sound identification")
 
-                # Upload to Cloudinary
-                result = cloudinary.uploader.upload(
-                    sound_data,
-                    folder="bird_sounds",
-                    resource_type="video"
-                )
+                # Save the uploaded sound to MEDIA_ROOT/bird_sounds/
+                sound_dir = os.path.join('bird_sounds')
+                sound_name = default_storage.save(os.path.join(sound_dir, sound_data.name), ContentFile(sound_data.read()))
+                sound_url = settings.MEDIA_URL + sound_name
 
-                # Use Google's Gemini API for sound identification
+                # Use Gemini for sound identification (existing logic)
                 genai.configure(api_key=settings.GEMINI_API_KEY)
                 model = genai.GenerativeModel('gemini-pro')
-
                 response = model.generate_content(
-                    f"Identify this bird species from its sound. Return only the scientific name. Sound URL: {result['secure_url']}"
+                    f"Identify this bird species from its sound. Return only the scientific name. Sound URL: {sound_url}"
                 )
-
                 bird_name = response.text.strip()
+                confidence = 0.8 * 100
+                ai_response = {'gemini_response': response.text}
 
             else:
                 raise ValidationError("Invalid identification type")
@@ -204,8 +174,9 @@ class IdentifyBirdView(BaseAPIView):
             bird, created = Bird.objects.get_or_create(
                 scientific_name=bird_name,
                 defaults={
-                    'name': bird_name,  # You might want to get a common name from an API
-                    'description': 'Automatically identified bird'
+                    'name': bird_name,
+                    'description': 'Automatically identified bird',
+                    'image_url': image_url
                 }
             )
 
@@ -213,42 +184,30 @@ class IdentifyBirdView(BaseAPIView):
             identification = BirdIdentification.objects.create(
                 user=request.user,
                 bird=bird,
-                identification_type=identification_type,
-                media_url=result['secure_url'],
-                confidence_score=0.8  # You might want to get this from the AI model
+                image_url=image_url,
+                sound_url=sound_url,
+                identified_species=bird_name,
+                confidence_level=confidence,
+                ai_response=ai_response,
+                latitude=data.get('latitude'),
+                longitude=data.get('longitude'),
+                location_name=data.get('location_name', '')
             )
 
-            return Response(BirdIdentificationSerializer(identification).data)
+            return Response({
+                'predicted_species': bird_name,
+                'image_url': image_url,
+                'sound_url': sound_url,
+                'identification': BirdIdentificationSerializer(identification).data
+            })
 
         except Exception as e:
             raise ValidationError(str(e))
 
 class BirdDetailView(RetrieveAPIView):
-    serializer_class = BirdSerializer
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
-    @swagger_auto_schema(
-        operation_description="Get detailed information about a specific bird",
-        responses={
-            200: openapi.Response(
-                description="Bird details retrieved successfully",
-                examples={
-                    "application/json": {
-                        "id": 1,
-                        "name": "Northern Cardinal",
-                        "scientific_name": "Cardinalis cardinalis",
-                        "description": "A medium-sized songbird...",
-                        "image_url": "https://example.com/cardinal.jpg",
-                        "sound_url": "https://example.com/cardinal.mp3",
-                        "rarity": "common",
-                        "habitat": "Woodlands, gardens, and shrublands",
-                        "diet": "Seeds, fruits, and insects"
-                    }
-                }
-            ),
-            404: "Not Found - Bird does not exist",
-            401: "Unauthorized - Authentication credentials were not provided"
-        }
-    )
+    serializer_class = BirdSerializer
 
     def get_queryset(self):
         return Bird.objects.all()
@@ -256,29 +215,15 @@ class BirdDetailView(RetrieveAPIView):
     def retrieve(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-
-            # If bird details are incomplete, fetch from external API
-            if not instance.description or not instance.image_url:
-                # Use Google's Gemini API to get more information
-                genai.configure(api_key=settings.GEMINI_API_KEY)
-                model = genai.GenerativeModel('gemini-pro')
-
-                response = model.generate_content(
-                    f"Provide detailed information about the bird species {instance.scientific_name}. Include description, habitat, and behavior."
-                )
-
-                # Update bird details
-                instance.description = response.text
-                instance.save()
-
             serializer = self.get_serializer(instance)
             return Response(serializer.data)
         except Exception as e:
             raise ValidationError(str(e))
 
 class BirdListView(ListAPIView):
-    serializer_class = BirdSerializer
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+    serializer_class = BirdSerializer
     @swagger_auto_schema(
         operation_description="List all birds with optional filtering",
         manual_parameters=[
@@ -345,13 +290,15 @@ class BirdListView(ListAPIView):
             raise ValidationError(str(e))
 
 class UserBirdIdentificationsView(ListAPIView):
-    serializer_class = BirdIdentificationSerializer
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+    serializer_class = BirdIdentificationSerializer
 
     def get_queryset(self):
         return BirdIdentification.objects.filter(user=self.request.user).order_by('-created_at')
 
 class UserCollectionStatsView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -378,6 +325,7 @@ class UserCollectionStatsView(APIView):
         return total_score / collection.count()
 
 class UserBraggingRightsView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -424,6 +372,7 @@ class UserBraggingRightsView(APIView):
         return "Top 50%"
 
 class UserRecentActivityView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -432,6 +381,7 @@ class UserRecentActivityView(APIView):
         return Response(serializer.data)
 
 class UserRecentActivityViewAllView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = UserActivitySerializer
 
@@ -439,6 +389,7 @@ class UserRecentActivityViewAllView(generics.ListAPIView):
         return UserActivity.objects.filter(user=self.request.user)
 
 class UserRecentActivitySearchView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = UserActivitySerializer
 
@@ -450,6 +401,7 @@ class UserRecentActivitySearchView(generics.ListAPIView):
         )
 
 class NearbyBirdActivityView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -479,6 +431,7 @@ class NearbyBirdActivityView(APIView):
         return Response(serializer.data)
 
 class NearbyBirdActivitySearchView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = SpotBirdSightingSerializer
 
@@ -505,6 +458,7 @@ class NearbyBirdActivitySearchView(generics.ListAPIView):
         )
 
 class NearbyBirdActivityViewAllView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = SpotBirdSightingSerializer
 
@@ -529,6 +483,7 @@ class NearbyBirdActivityViewAllView(generics.ListAPIView):
         )
 
 class BirdBrainAskView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -550,6 +505,7 @@ class BirdBrainAskView(APIView):
         return Response(response)
 
 class BirdBrainSearchLocationView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -563,6 +519,7 @@ class BirdBrainSearchLocationView(APIView):
         return Response(locations)
 
 class BirdBrainChatView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -585,6 +542,7 @@ class BirdBrainChatView(APIView):
         return Response(serializer.data)
 
 class BirdCategoriesView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = BirdCategorySerializer
 
@@ -595,6 +553,7 @@ class BirdCategoriesView(generics.ListAPIView):
         ).distinct()
 
 class RarityHighlightsView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -640,6 +599,7 @@ class RarityHighlightsView(APIView):
         return "Common find with typical conservation status"
 
 class CollectionSearchView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = UserCollectionSerializer
 
@@ -651,6 +611,7 @@ class CollectionSearchView(generics.ListAPIView):
         )
 
 class CollectionFiltersView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -665,6 +626,7 @@ class CollectionFiltersView(APIView):
         })
 
 class CollectionGetAllView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = UserCollectionSerializer
 
@@ -672,6 +634,7 @@ class CollectionGetAllView(generics.ListAPIView):
         return UserCollection.objects.filter(user=self.request.user)
 
 class CollectionDetailsView(generics.RetrieveAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = UserCollectionSerializer
     lookup_field = 'id'
@@ -680,6 +643,7 @@ class CollectionDetailsView(generics.RetrieveAPIView):
         return UserCollection.objects.filter(user=self.request.user)
 
 class CollectionFavoriteView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -709,6 +673,7 @@ class CollectionFavoriteView(APIView):
             )
 
 class CollectionFavoritesView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = UserCollectionSerializer
 
@@ -719,6 +684,7 @@ class CollectionFavoritesView(generics.ListAPIView):
         )
 
 class BookmarkView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -755,6 +721,7 @@ class BookmarkView(APIView):
             )
 
 class BookmarkedArticlesView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = UserBookmarkSerializer
 
@@ -762,6 +729,7 @@ class BookmarkedArticlesView(generics.ListAPIView):
         return UserBookmark.objects.filter(user=self.request.user)
 
 class DiscoveryLearnView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = ArticleSerializer
 
@@ -772,9 +740,8 @@ class DiscoveryLearnView(generics.ListAPIView):
             queryset = queryset.filter(category=filter_type)
         return queryset.order_by('-published_date')
 
-
-
 class ArticleDetailsView(generics.RetrieveAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = ArticleSerializer
     queryset = Article.objects.all()
@@ -794,6 +761,7 @@ class ArticleDetailsView(generics.RetrieveAPIView):
         return Response(data)
 
 class ExploreView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = ArticleSerializer
 
@@ -803,6 +771,7 @@ class ExploreView(generics.ListAPIView):
         ).order_by('-published_date')
 
 class BirdSearchView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = BirdListSerializer
 
@@ -828,6 +797,7 @@ class BirdSearchView(generics.ListAPIView):
         return queryset
 
 class CommonFeederBirdsView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = BirdListSerializer
 
@@ -837,6 +807,7 @@ class CommonFeederBirdsView(generics.ListAPIView):
         ).order_by('name')
 
 class BirdsByCategoryView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = BirdListSerializer
 
@@ -850,6 +821,7 @@ class BirdsByCategoryView(generics.ListAPIView):
         ).order_by('name')
 
 class NearbySpotsView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = NearbySpotSerializer
 
@@ -874,6 +846,7 @@ class NearbySpotsView(generics.ListAPIView):
         )
 
 class NearbyBirdListView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = SpotBirdSightingSerializer
 

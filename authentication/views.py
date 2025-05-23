@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth import authenticate
 from django.utils import timezone
 from datetime import timedelta
@@ -22,7 +23,9 @@ from drf_yasg import openapi
 
 # Create your views here.
 
-class UserRegistrationView(BaseAPIView):
+class UserRegistrationView(APIView):
+    permission_classes = [AllowAny]  # Allow unauthenticated access
+
     @swagger_auto_schema(
         operation_description="Register a new user",
         request_body=openapi.Schema(
@@ -74,7 +77,9 @@ class UserRegistrationView(BaseAPIView):
         except Exception as e:
             raise ValidationError(str(e))
 
-class UserLoginView(BaseAPIView):
+class UserLoginView(APIView):
+    permission_classes = [AllowAny]  # Allow unauthenticated access
+
     @swagger_auto_schema(
         operation_description="Login with email and password",
         request_body=openapi.Schema(
@@ -134,6 +139,9 @@ class UserLoginView(BaseAPIView):
             raise ValidationError(str(e))
 
 class UserProfileView(BaseAPIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
     @swagger_auto_schema(
         operation_description="Get user profile information",
         responses={

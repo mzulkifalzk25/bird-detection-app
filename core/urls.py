@@ -40,12 +40,12 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # API versioning
-    path('api/auth/', include('authentication.urls')),
-    path('api/birds/', include('birds.urls')),
-    path('api/collection/', include('collection.urls')),
-    path('api/discover/', include('discover.urls')),
-    path('api/nearby/', include('nearby.urls')),
-    path('api/recent-activity/', include('recent_activity.urls')),
+    path('api/v2/auth/', include('authentication.urls')),
+    path('api/v2/birds/', include('birds.urls')),
+    path('api/v2/collection/', include('collection.urls')),
+    path('api/v2/discover/', include('discover.urls')),
+    path('api/v2/nearby/', include('nearby.urls')),
+    path('api/v2/recent-activity/', include('recent_activity.urls')),
 
     # API documentation
     path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
