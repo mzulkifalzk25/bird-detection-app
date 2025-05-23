@@ -58,7 +58,6 @@ celerybeat-schedule.*
 celerybeat.pid
 
 # Environment
-.env
 .venv
 env/
 venv/
