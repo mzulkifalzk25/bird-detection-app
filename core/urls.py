@@ -16,6 +16,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework import permissions
@@ -24,10 +26,10 @@ from rest_framework import permissions
 schema_view = get_schema_view(
     openapi.Info(
         title="Bird Detection API",
-        default_version='v2',
+        default_version='v1',
         description="API documentation for Bird Detection application",
         terms_of_service="https://www.google.com/policies/terms/",
-        contact=openapi.Contact(email="contact@birds.local"),
+        contact=openapi.Contact(email="contact@birddetection.com"),
         license=openapi.License(name="BSD License"),
     ),
     public=True,
@@ -38,13 +40,18 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # API versioning
-    path('api/v2/', include([
-        path('', include('authentication.urls')),
-        path('', include('birds.urls')),
-    ])),
+    path('api/v2/auth/', include('authentication.urls')),
+    path('api/v2/birds/', include('birds.urls')),
+    path('api/v2/collection/', include('collection.urls')),
+    path('api/v2/discover/', include('discover.urls')),
+    path('api/v2/nearby/', include('nearby.urls')),
+    path('api/v2/recent-activity/', include('recent_activity.urls')),
 
     # API documentation
     path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

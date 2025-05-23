@@ -13,6 +13,11 @@ djangorestframework-simplejwt==5.3.1
 django-rest-framework-social-oauth2==1.1.0
 social-auth-core==4.5.1
 
+# Payment Processing
+stripe==7.11.0
+django-stripe-payments==2.0.0
+# django-stripe-subscription==0.1.0
+
 # AI & ML
 google-generativeai==0.3.2
 openai==1.8.0
@@ -20,11 +25,14 @@ numpy==1.26.3
 tensorflow==2.16.1  # Latest version compatible with Python 3.12
 librosa==0.10.1  # For audio processing
 soundfile==0.12.1  # Required for audio processing
+transformers==4.37.2
+torch==2.2.0
+torchvision==0.17.0
 
 # Image Processing
 Pillow==10.2.0
 python-magic==0.4.27
-python-magic-bin==0.4.14  # For Windows support
+# python-magic-bin==0.4.14
 
 # Storage & Media
 django-storages==1.14.2
@@ -62,9 +70,6 @@ django-debug-toolbar==4.2.0
 python-decouple==3.8
 dj-database-url==2.1.0
 
-# Payment Processing
-stripe==7.11.0
-
 # Testing
 pytest==7.4.4
 pytest-django==4.7.0
@@ -86,4 +91,4 @@ certifi==2023.11.17
 chardet==5.2.0
 idna==3.6
 django-phonenumber-field[phonenumbers]==7.3.0  # For phone number handling
-Werkzeug==3.0.1  # Required for debugger 
+Werkzeug==3.0.1  # Required for debugger

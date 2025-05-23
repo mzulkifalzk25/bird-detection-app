@@ -2,8 +2,9 @@ from rest_framework import serializers
 from birds.serializers import BirdListSerializer
 from .models import (
     Collection, BirdCategory, CategoryBird, UserAchievement,
-    UserStreak, RarityScore, RecentActivity
+    UserStreak, RarityScore, UserCollection
 )
+from birds.serializers import BirdSerializer
 
 class CollectionSerializer(serializers.ModelSerializer):
     bird_details = BirdListSerializer(source='bird', read_only=True)
@@ -57,31 +58,30 @@ class RarityScoreSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['user']
 
-class RecentActivitySerializer(serializers.ModelSerializer):
-    bird_details = BirdListSerializer(source='bird', read_only=True)
+class UserCollectionSerializer(serializers.ModelSerializer):
+    bird = BirdSerializer(read_only=True)
 
     class Meta:
-        model = RecentActivity
+        model = UserCollection
         fields = [
-            'id', 'bird', 'bird_details', 'activity_type',
-            'date_added', 'location', 'details'
+            'id', 'bird', 'is_favorite', 'date_added',
+            'notes', 'latitude', 'longitude', 'location_name'
         ]
-        read_only_fields = ['user']
+        read_only_fields = ['date_added']
 
 class CollectionStatsSerializer(serializers.Serializer):
-    total_birds = serializers.IntegerField()
-    favorite_birds = serializers.IntegerField()
-    featured_birds = serializers.IntegerField()
-    locations_explored = serializers.IntegerField()
-    rarity_distribution = RarityScoreSerializer()
-    recent_additions = RecentActivitySerializer(many=True)
+    s_rarity_count = serializers.IntegerField()
+    a_rarity_count = serializers.IntegerField()
+    b_rarity_count = serializers.IntegerField()
+    c_rarity_count = serializers.IntegerField()
+    collection_score = serializers.IntegerField()
+    rarity_index = serializers.FloatField()
 
 class BraggingRightsSerializer(serializers.Serializer):
     rarest_find = serializers.CharField()
     collection_rank = serializers.CharField()
     locations_explored = serializers.IntegerField()
     streak_status = serializers.CharField()
-    achievements = UserAchievementSerializer(many=True)
 
 class CollectionSearchSerializer(serializers.Serializer):
     query = serializers.CharField(required=False, allow_blank=True)
@@ -96,4 +96,4 @@ class CollectionFilterSerializer(serializers.Serializer):
         choices=['rarity', 'region', 'season'],
         required=True
     )
-    filter_value = serializers.CharField(required=True) 
+    filter_value = serializers.CharField(required=True)

@@ -1,0 +1,490 @@
+{
+  "info": {
+    "name": "Bird Detection Backend",
+    "description": "API collection for Bird Detection application",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/register/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"your_password\",\n    \"username\": \"username\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"your_password\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/profile/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "profile", ""]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/profile/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "profile", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"new_username\",\n    \"bio\": \"Bird watching enthusiast\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "logout", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refresh\": \"your_refresh_token\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Birds",
+      "item": [
+        {
+          "name": "Enhance Image",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/birds/enhance-image/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "birds", "enhance-image", ""]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "/path/to/image.jpg"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Identify Bird",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/birds/identify/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "birds", "identify", ""]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "identification_type",
+                  "value": "image",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "/path/to/image.jpg"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Bird Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/birds/1/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "birds", "1", ""]
+            }
+          }
+        },
+        {
+          "name": "List Birds",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/birds/?search=sparrow&rarity=common",
+              "host": ["{{base_url}}"],
+              "path": ["api", "birds", ""],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "sparrow"
+                },
+                {
+                  "key": "rarity",
+                  "value": "common"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Nearby",
+      "item": [
+        {
+          "name": "Get Nearby Spots",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/nearby/user/nearby-spots/?latitude=40.7128&longitude=-74.0060&radius=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "nearby", "user", "nearby-spots", ""],
+              "query": [
+                {
+                  "key": "latitude",
+                  "value": "40.7128"
+                },
+                {
+                  "key": "longitude",
+                  "value": "-74.0060"
+                },
+                {
+                  "key": "radius",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Bird List at Spot",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/nearby/user/nearby-bird-list/1/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "nearby", "user", "nearby-bird-list", "1", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Nearby Bird Activity",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/nearby/user/nearby-bird-activity/?latitude=40.7128&longitude=-74.0060&radius=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "nearby", "user", "nearby-bird-activity", ""],
+              "query": [
+                {
+                  "key": "latitude",
+                  "value": "40.7128"
+                },
+                {
+                  "key": "longitude",
+                  "value": "-74.0060"
+                },
+                {
+                  "key": "radius",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Collection",
+      "item": [
+        {
+          "name": "Get Collection Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/collection/user/collection/stats/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "collection", "user", "collection", "stats", ""]
+            }
+          }
+        },
+        {
+          "name": "List Collection",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/collection/user/collection/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "collection", "user", "collection", ""]
+            }
+          }
+        },
+        {
+          "name": "Add to Collection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/collection/user/collection/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "collection", "user", "collection", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"bird\": 1,\n    \"notes\": \"Found in Central Park\",\n    \"latitude\": 40.7829,\n    \"longitude\": -73.9654,\n    \"location_name\": \"Central Park\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Discover",
+      "item": [
+        {
+          "name": "List Articles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/discover/user/articles/?category=Tips&search=birdwatching",
+              "host": ["{{base_url}}"],
+              "path": ["api", "discover", "user", "articles", ""],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "Tips"
+                },
+                {
+                  "key": "search",
+                  "value": "birdwatching"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Article",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/discover/user/articles/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "discover", "user", "articles", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Bird Watching Tips\",\n    \"content\": \"Learn how to spot rare birds...\",\n    \"category\": \"Tips\",\n    \"read_time\": 5,\n    \"tags\": \"birdwatching,tips,beginner\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Bookmarks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/discover/user/bookmarks/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "discover", "user", "bookmarks", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Bookmark",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/discover/user/bookmarks/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "discover", "user", "bookmarks", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"article\": 1,\n    \"notes\": \"Interesting article about bird watching\"\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

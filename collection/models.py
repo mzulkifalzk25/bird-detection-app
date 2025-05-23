@@ -3,15 +3,19 @@ from django.conf import settings
 from birds.models import Bird
 
 class Collection(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    bird = models.ForeignKey(Bird, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='collection_collections')
+    bird = models.ForeignKey(Bird, on_delete=models.CASCADE, related_name='collection_bird_collections')
     date_added = models.DateTimeField(auto_now_add=True)
     location = models.CharField(max_length=255, blank=True)
     notes = models.TextField(blank=True)
     is_favorite = models.BooleanField(default=False)
     is_featured = models.BooleanField(default=False)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    location_name = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
+        app_label = 'collection'
         unique_together = ['user', 'bird']
         ordering = ['-date_added']
 
@@ -25,16 +29,18 @@ class BirdCategory(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        app_label = 'collection'
         verbose_name_plural = 'Bird Categories'
 
     def __str__(self):
         return self.name
 
 class CategoryBird(models.Model):
-    category = models.ForeignKey(BirdCategory, on_delete=models.CASCADE)
-    bird = models.ForeignKey(Bird, on_delete=models.CASCADE)
+    category = models.ForeignKey(BirdCategory, on_delete=models.CASCADE, related_name='birds')
+    bird = models.ForeignKey(Bird, on_delete=models.CASCADE, related_name='categories')
 
     class Meta:
+        app_label = 'collection'
         unique_together = ['category', 'bird']
 
     def __str__(self):
@@ -48,7 +54,7 @@ class UserAchievement(models.Model):
         ('LOCATION', 'Location Explorer'),
     ]
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='achievements')
     achievement_type = models.CharField(max_length=20, choices=ACHIEVEMENT_TYPES)
     title = models.CharField(max_length=100)
     description = models.TextField()
@@ -57,28 +63,51 @@ class UserAchievement(models.Model):
     icon_url = models.URLField(max_length=500, blank=True)
 
     class Meta:
+        app_label = 'collection'
         ordering = ['-date_achieved']
 
     def __str__(self):
         return f"{self.user.username}'s {self.title}"
 
-class UserStreak(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='collection_streak')
-    current_streak = models.IntegerField(default=0)
-    longest_streak = models.IntegerField(default=0)
-    last_activity_date = models.DateField(null=True, blank=True)
+class UserCollection(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='collection_user_collections')
+    bird = models.ForeignKey(Bird, on_delete=models.CASCADE, related_name='collection_usercollection_bird')
+    is_favorite = models.BooleanField(default=False)
+    date_added = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    location_name = models.CharField(max_length=255, null=True, blank=True)
+
+    class Meta:
+        unique_together = ('user', 'bird')
+        ordering = ['-date_added']
 
     def __str__(self):
-        return f"{self.user.username}'s Streak: {self.current_streak} days"
+        return f"{self.user.username}'s collection of {self.bird.name}"
+
+class UserStreak(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='streak')
+    current_streak = models.IntegerField(default=0)
+    longest_streak = models.IntegerField(default=0)
+    last_activity_date = models.DateField(null=True)
+    locations_explored = models.IntegerField(default=0)
+    total_identifications = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.user.username}'s streak: {self.current_streak} days"
 
 class RarityScore(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='rarity_score')
     s_rarity_count = models.IntegerField(default=0)
     a_rarity_count = models.IntegerField(default=0)
     b_rarity_count = models.IntegerField(default=0)
     c_rarity_count = models.IntegerField(default=0)
     total_score = models.IntegerField(default=0)
     last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'collection'
 
     def __str__(self):
         return f"{self.user.username}'s Rarity Score: {self.total_score}"
@@ -93,18 +122,3 @@ class RarityScore(models.Model):
             self.c_rarity_count * weights['C']
         )
         return self.total_score
-
-class RecentActivity(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    bird = models.ForeignKey(Bird, on_delete=models.CASCADE)
-    activity_type = models.CharField(max_length=50)  # e.g., "identified", "added_to_collection"
-    date_added = models.DateTimeField(auto_now_add=True)
-    location = models.CharField(max_length=255, blank=True)
-    details = models.JSONField(default=dict)  # For additional activity-specific data
-
-    class Meta:
-        ordering = ['-date_added']
-        verbose_name_plural = 'Recent Activities'
-
-    def __str__(self):
-        return f"{self.user.username}'s activity: {self.activity_type} - {self.bird.name}"

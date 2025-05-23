@@ -3,161 +3,302 @@ from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.shortcuts import get_object_or_404
-from .models import Bird, BirdIdentification
+from .models import (
+    Bird, BirdIdentification, BirdImage, BirdSound, BirdCategory,
+    BirdCategoryAssignment, Article, UserBookmark, AIChat
+)
+from collection.models import UserCollection, UserStreak
+from recent_activity.models import UserActivity
+from nearby.models import NearbySpot, SpotBirdSighting
 from .serializers import (
     BirdDetailSerializer, BirdListSerializer, BirdIdentificationSerializer,
-    ImageEnhancementSerializer, BirdIdentificationRequestSerializer
-)
-from .services import BirdIdentificationService
-from django.db.models import Count, Q
-from django.utils import timezone
-from datetime import timedelta
-from .models import (
-    BirdImage, BirdSound, BirdCategory, Article, UserCollection,
-    UserActivity, UserStreak, UserBookmark, AIChat, NearbySpot, SpotBirdSighting
-)
-from .serializers import (
+    ImageEnhancementSerializer, BirdIdentificationRequestSerializer,
     BirdSerializer, BirdImageSerializer, BirdSoundSerializer,
     BirdCategorySerializer, ArticleSerializer, UserCollectionSerializer,
     UserActivitySerializer, UserStreakSerializer, UserBookmarkSerializer,
     CollectionStatsSerializer, BraggingRightsSerializer, NearbySpotSerializer,
     SpotBirdSightingSerializer
 )
+from .services import BirdIdentificationService
+from django.db.models import Count, Q
+from django.utils import timezone
+from datetime import timedelta
+from core.views import BaseAPIView
+from rest_framework.exceptions import ValidationError
+import cloudinary
+import cloudinary.uploader
+import google.generativeai as genai
+from django.conf import settings
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from rest_framework.generics import (
+    ListAPIView,
+    RetrieveAPIView,
+    CreateAPIView,
+    UpdateAPIView,
+    DestroyAPIView,
+)
+from PIL import Image
+from transformers import pipeline
+import tempfile
+import os
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
 # Create your views here.
 
-class EnhanceImageView(APIView):
+class EnhanceImageView(BaseAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        """Enhance bird image using AI"""
-        serializer = ImageEnhancementSerializer(data=request.data)
-        if serializer.is_valid():
-            try:
-                enhanced_url = BirdIdentificationService.enhance_image(
-                    serializer.validated_data['image']
-                )
-                return Response({'enhanced_image_url': enhanced_url})
-            except Exception as e:
-                return Response(
-                    {'error': str(e)},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-class IdentifyBirdView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        """Identify bird from image or sound"""
-        serializer = BirdIdentificationRequestSerializer(data=request.data)
-        if serializer.is_valid():
-            try:
-                data = serializer.validated_data
-
-                # Handle image identification
-                if 'image' in data:
-                    result = BirdIdentificationService.identify_bird_from_image(
-                        data['image'],
-                        data.get('location_name')
-                    )
-                # Handle sound identification
-                elif 'sound' in data:
-                    result = BirdIdentificationService.identify_bird_from_sound(
-                        data['sound'],
-                        data.get('location_name')
-                    )
-                else:
-                    return Response(
-                        {'error': 'Either image or sound must be provided'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
-                if not result['success']:
-                    return Response(
-                        {'error': result['error']},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                    )
-
-                # Get or create bird in database
-                bird_data = result['data']
-                bird, _ = Bird.objects.get_or_create(
-                    name=bird_data['identified_species'],
-                    defaults={
-                        'scientific_name': bird_data['scientific_name'],
-                        # Add other fields as needed
+    @swagger_auto_schema(
+        operation_description="Enhance a bird image using AI",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['image'],
+            properties={
+                'image': openapi.Schema(type=openapi.TYPE_STRING, format='binary', description='Bird image file'),
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                description="Image enhanced successfully",
+                examples={
+                    "application/json": {
+                        "enhanced_image_url": "https://example.com/enhanced_image.jpg"
                     }
-                )
+                }
+            ),
+            400: "Bad Request - Invalid image file",
+            401: "Unauthorized - Authentication credentials were not provided"
+        }
+    )
+    def post(self, request):
+        try:
+            serializer = ImageEnhancementSerializer(data=request.data)
+            if not serializer.is_valid():
+                raise ValidationError(serializer.errors)
 
-                # Create identification record
-                identification = BirdIdentification.objects.create(
-                    user=request.user,
-                    bird=bird,
-                    image_url=data.get('image_url', ''),
-                    sound_url=data.get('sound_url', ''),
-                    identified_species=bird_data['identified_species'],
-                    confidence_level=float(bird_data['confidence_level']),
-                    ai_response=bird_data,
-                    latitude=data.get('latitude'),
-                    longitude=data.get('longitude'),
-                    location_name=data.get('location_name', '')
-                )
+            image_data = serializer.validated_data['image']
 
-                return Response(BirdIdentificationSerializer(identification).data)
+            # Upload to Cloudinary
+            result = cloudinary.uploader.upload(
+                image_data,
+                folder="bird_images",
+                transformation=[
+                    {'quality': 'auto:best'},
+                    {'fetch_format': 'auto'}
+                ]
+            )
 
-            except Exception as e:
-                return Response(
-                    {'error': str(e)},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'enhanced_image_url': result['secure_url']
+            })
+        except Exception as e:
+            raise ValidationError(str(e))
 
-class BirdDetailView(generics.RetrieveAPIView):
+class IdentifyBirdView(BaseAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
-    queryset = Bird.objects.all()
-    serializer_class = BirdDetailSerializer
 
-    def get(self, request, *args, **kwargs):
-        """Get detailed information about a bird"""
-        instance = self.get_object()
+    def post(self, request):
+        try:
+            serializer = BirdIdentificationRequestSerializer(data=request.data)
+            if not serializer.is_valid():
+                raise ValidationError(serializer.errors)
 
-        # If we don't have complete information, fetch from AI
-        if not instance.description or not instance.habitat:
-            try:
-                result = BirdIdentificationService.get_bird_details_from_ai(instance.name)
-                if result['success']:
-                    bird_data = result['data']
-                    # Update bird information
-                    for field, value in bird_data.items():
-                        if hasattr(instance, field) and not getattr(instance, field):
-                            setattr(instance, field, value)
-                    instance.save()
-            except Exception as e:
-                # Continue even if AI call fails
-                pass
+            data = serializer.validated_data
+            identification_type = data.get('identification_type')
 
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
+            image_url = ''
+            sound_url = ''
 
-class BirdListView(generics.ListAPIView):
+            if identification_type == 'image' or (not identification_type and data.get('image')):
+                # Handle image identification
+                image_data = data.get('image')
+                if not image_data:
+                    raise ValidationError("Image is required for image identification")
+
+                # Save the uploaded image to MEDIA_ROOT/bird_identifications/
+                image_dir = os.path.join('bird_identifications')
+                image_name = default_storage.save(os.path.join(image_dir, image_data.name), ContentFile(image_data.read()))
+                image_url = settings.MEDIA_URL + image_name
+
+                # Reset file pointer before reading again
+                image_data.seek(0)
+
+                # Open the image for classification
+                from PIL import Image
+                from transformers import pipeline
+                import tempfile
+
+                with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as temp_img_file:
+                    temp_img_file.write(image_data.read())
+                    temp_img_path = temp_img_file.name
+
+                img = Image.open(temp_img_path).convert("RGB")
+                pipe = pipeline("image-classification", model="dennisjooo/Birds-Classifier-EfficientNetB2")
+                result = pipe(img)[0]
+                os.remove(temp_img_path)
+
+                bird_name = result['label']
+                confidence = float(result.get('score', 0.8)) * 100
+                ai_response = result
+
+            elif identification_type == 'sound':
+                # Handle sound identification
+                sound_data = data.get('sound')
+                if not sound_data:
+                    raise ValidationError("Sound file is required for sound identification")
+
+                # Save the uploaded sound to MEDIA_ROOT/bird_sounds/
+                sound_dir = os.path.join('bird_sounds')
+                sound_name = default_storage.save(os.path.join(sound_dir, sound_data.name), ContentFile(sound_data.read()))
+                sound_url = settings.MEDIA_URL + sound_name
+
+                # Use Gemini for sound identification (existing logic)
+                genai.configure(api_key=settings.GEMINI_API_KEY)
+                model = genai.GenerativeModel('gemini-pro')
+                response = model.generate_content(
+                    f"Identify this bird species from its sound. Return only the scientific name. Sound URL: {sound_url}"
+                )
+                bird_name = response.text.strip()
+                confidence = 0.8 * 100
+                ai_response = {'gemini_response': response.text}
+
+            else:
+                raise ValidationError("Invalid identification type")
+
+            # Find or create bird
+            bird, created = Bird.objects.get_or_create(
+                scientific_name=bird_name,
+                defaults={
+                    'name': bird_name,
+                    'description': 'Automatically identified bird',
+                    'image_url': image_url
+                }
+            )
+
+            # Create identification record
+            identification = BirdIdentification.objects.create(
+                user=request.user,
+                bird=bird,
+                image_url=image_url,
+                sound_url=sound_url,
+                identified_species=bird_name,
+                confidence_level=confidence,
+                ai_response=ai_response,
+                latitude=data.get('latitude'),
+                longitude=data.get('longitude'),
+                location_name=data.get('location_name', '')
+            )
+
+            return Response({
+                'predicted_species': bird_name,
+                'image_url': image_url,
+                'sound_url': sound_url,
+                'identification': BirdIdentificationSerializer(identification).data
+            })
+
+        except Exception as e:
+            raise ValidationError(str(e))
+
+class BirdDetailView(RetrieveAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
-    queryset = Bird.objects.all()
-    serializer_class = BirdListSerializer
-    filterset_fields = ['name', 'scientific_name', 'rarity']
-    search_fields = ['name', 'scientific_name', 'description']
-    ordering_fields = ['name', 'rarity', 'created_at']
-    ordering = ['-created_at']
+    serializer_class = BirdSerializer
 
-class UserBirdIdentificationsView(generics.ListAPIView):
+    def get_queryset(self):
+        return Bird.objects.all()
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+        except Exception as e:
+            raise ValidationError(str(e))
+
+class BirdListView(ListAPIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = BirdSerializer
+    @swagger_auto_schema(
+        operation_description="List all birds with optional filtering",
+        manual_parameters=[
+            openapi.Parameter(
+                'search',
+                openapi.IN_QUERY,
+                description="Search birds by name or scientific name",
+                type=openapi.TYPE_STRING
+            ),
+            openapi.Parameter(
+                'rarity',
+                openapi.IN_QUERY,
+                description="Filter by rarity (common, uncommon, rare, very_rare)",
+                type=openapi.TYPE_STRING,
+                enum=['common', 'uncommon', 'rare', 'very_rare']
+            )
+        ],
+        responses={
+            200: openapi.Response(
+                description="List of birds retrieved successfully",
+                examples={
+                    "application/json": {
+                        "count": 2,
+                        "results": [
+                            {
+                                "id": 1,
+                                "name": "Northern Cardinal",
+                                "scientific_name": "Cardinalis cardinalis",
+                                "rarity": "common"
+                            },
+                            {
+                                "id": 2,
+                                "name": "Blue Jay",
+                                "scientific_name": "Cyanocitta cristata",
+                                "rarity": "common"
+                            }
+                        ]
+                    }
+                }
+            ),
+            401: "Unauthorized - Authentication credentials were not provided"
+        }
+    )
+
+    def get_queryset(self):
+        try:
+            queryset = Bird.objects.all()
+
+            # Filter by name or scientific name
+            search = self.request.query_params.get('search')
+            if search:
+                queryset = queryset.filter(
+                    Q(name__icontains=search) |
+                    Q(scientific_name__icontains=search)
+                )
+
+            # Filter by rarity
+            rarity = self.request.query_params.get('rarity')
+            if rarity:
+                queryset = queryset.filter(rarity=rarity)
+
+            return queryset.order_by('name')
+        except Exception as e:
+            raise ValidationError(str(e))
+
+class UserBirdIdentificationsView(ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = BirdIdentificationSerializer
 
     def get_queryset(self):
-        """Get all bird identifications for the current user"""
-        return BirdIdentification.objects.filter(user=self.request.user)
+        return BirdIdentification.objects.filter(user=self.request.user).order_by('-created_at')
 
 class UserCollectionStatsView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -184,6 +325,7 @@ class UserCollectionStatsView(APIView):
         return total_score / collection.count()
 
 class UserBraggingRightsView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -230,6 +372,7 @@ class UserBraggingRightsView(APIView):
         return "Top 50%"
 
 class UserRecentActivityView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -238,6 +381,7 @@ class UserRecentActivityView(APIView):
         return Response(serializer.data)
 
 class UserRecentActivityViewAllView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = UserActivitySerializer
 
@@ -245,6 +389,7 @@ class UserRecentActivityViewAllView(generics.ListAPIView):
         return UserActivity.objects.filter(user=self.request.user)
 
 class UserRecentActivitySearchView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = UserActivitySerializer
 
@@ -256,6 +401,7 @@ class UserRecentActivitySearchView(generics.ListAPIView):
         )
 
 class NearbyBirdActivityView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -285,6 +431,7 @@ class NearbyBirdActivityView(APIView):
         return Response(serializer.data)
 
 class NearbyBirdActivitySearchView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = SpotBirdSightingSerializer
 
@@ -311,6 +458,7 @@ class NearbyBirdActivitySearchView(generics.ListAPIView):
         )
 
 class NearbyBirdActivityViewAllView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = SpotBirdSightingSerializer
 
@@ -335,6 +483,7 @@ class NearbyBirdActivityViewAllView(generics.ListAPIView):
         )
 
 class BirdBrainAskView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -356,6 +505,7 @@ class BirdBrainAskView(APIView):
         return Response(response)
 
 class BirdBrainSearchLocationView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -369,6 +519,7 @@ class BirdBrainSearchLocationView(APIView):
         return Response(locations)
 
 class BirdBrainChatView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -391,6 +542,7 @@ class BirdBrainChatView(APIView):
         return Response(serializer.data)
 
 class BirdCategoriesView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = BirdCategorySerializer
 
@@ -401,6 +553,7 @@ class BirdCategoriesView(generics.ListAPIView):
         ).distinct()
 
 class RarityHighlightsView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -446,6 +599,7 @@ class RarityHighlightsView(APIView):
         return "Common find with typical conservation status"
 
 class CollectionSearchView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = UserCollectionSerializer
 
@@ -456,27 +610,23 @@ class CollectionSearchView(generics.ListAPIView):
             bird__name__icontains=query
         )
 
-class CollectionFiltersView(generics.ListAPIView):
+class CollectionFiltersView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
-    serializer_class = UserCollectionSerializer
 
-    def get_queryset(self):
-        filter_type = self.request.query_params.get('filter', '')
-        queryset = UserCollection.objects.filter(user=self.request.user)
+    def get(self, request):
+        rarity_filters = ["All", "S-Rarity", "A-Rarity", "B-Rarity", "C-Rarity"]
+        region_filters = ["Asia", "Europe", "Africa", "North America"]
+        season_filters = ["Winter", "Summer", "Spring", "Autumn"]
 
-        if filter_type == 'Rarity':
-            rarity = self.request.query_params.get('value', '')
-            return queryset.filter(bird__rarity=rarity)
-        elif filter_type == 'Region':
-            region = self.request.query_params.get('value', '')
-            return queryset.filter(bird__global_distribution__icontains=region)
-        elif filter_type == 'Season':
-            season = self.request.query_params.get('value', '')
-            return queryset.filter(bird__migration_pattern__icontains=season)
-
-        return queryset
+        return Response({
+            "rarity_filters": rarity_filters,
+            "region_filters": region_filters,
+            "season_filters": season_filters
+        })
 
 class CollectionGetAllView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = UserCollectionSerializer
 
@@ -484,6 +634,7 @@ class CollectionGetAllView(generics.ListAPIView):
         return UserCollection.objects.filter(user=self.request.user)
 
 class CollectionDetailsView(generics.RetrieveAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = UserCollectionSerializer
     lookup_field = 'id'
@@ -492,6 +643,7 @@ class CollectionDetailsView(generics.RetrieveAPIView):
         return UserCollection.objects.filter(user=self.request.user)
 
 class CollectionFavoriteView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -521,6 +673,7 @@ class CollectionFavoriteView(APIView):
             )
 
 class CollectionFavoritesView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = UserCollectionSerializer
 
@@ -531,6 +684,7 @@ class CollectionFavoritesView(generics.ListAPIView):
         )
 
 class BookmarkView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -567,6 +721,7 @@ class BookmarkView(APIView):
             )
 
 class BookmarkedArticlesView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = UserBookmarkSerializer
 
@@ -574,19 +729,19 @@ class BookmarkedArticlesView(generics.ListAPIView):
         return UserBookmark.objects.filter(user=self.request.user)
 
 class DiscoveryLearnView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = ArticleSerializer
 
     def get_queryset(self):
         filter_type = self.request.query_params.get('filter', 'All')
         queryset = Article.objects.all()
-
         if filter_type != 'All':
             queryset = queryset.filter(category=filter_type)
-
         return queryset.order_by('-published_date')
 
 class ArticleDetailsView(generics.RetrieveAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = ArticleSerializer
     queryset = Article.objects.all()
@@ -606,6 +761,7 @@ class ArticleDetailsView(generics.RetrieveAPIView):
         return Response(data)
 
 class ExploreView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = ArticleSerializer
 
@@ -615,12 +771,15 @@ class ExploreView(generics.ListAPIView):
         ).order_by('-published_date')
 
 class BirdSearchView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = BirdListSerializer
 
     def get_queryset(self):
         query = self.request.query_params.get('query', '')
         filter_type = self.request.query_params.get('filter', '')
+        filter_value = self.request.query_params.get('value', '')
+
         queryset = Bird.objects.all()
 
         if query:
@@ -629,17 +788,16 @@ class BirdSearchView(generics.ListAPIView):
                 Q(scientific_name__icontains=query)
             )
 
-        if filter_type:
-            if filter_type == 'Rarity':
-                rarity = self.request.query_params.get('value', '')
-                queryset = queryset.filter(rarity=rarity)
-            elif filter_type == 'Region':
-                region = self.request.query_params.get('value', '')
-                queryset = queryset.filter(global_distribution__icontains=region)
+        if filter_type and filter_value:
+            if filter_type.lower() == 'rarity':
+                queryset = queryset.filter(rarity__iexact=filter_value)
+            elif filter_type.lower() == 'region':
+                queryset = queryset.filter(global_distribution__icontains=filter_value)
 
         return queryset
 
 class CommonFeederBirdsView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = BirdListSerializer
 
@@ -649,6 +807,7 @@ class CommonFeederBirdsView(generics.ListAPIView):
         ).order_by('name')
 
 class BirdsByCategoryView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = BirdListSerializer
 
@@ -662,6 +821,7 @@ class BirdsByCategoryView(generics.ListAPIView):
         ).order_by('name')
 
 class NearbySpotsView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = NearbySpotSerializer
 
@@ -686,6 +846,7 @@ class NearbySpotsView(generics.ListAPIView):
         )
 
 class NearbyBirdListView(generics.ListAPIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = SpotBirdSightingSerializer
 

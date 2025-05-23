@@ -1,10 +1,14 @@
 from rest_framework import serializers
+
+from recent_activity.models import UserActivity
+from nearby.models import NearbySpot, SpotBirdSighting
+from collection.models import UserCollection, UserStreak
+
 from .models import (
     Bird, BirdImage, BirdSound, BirdIdentification, SimilarBird,
-    UserCollection, UserActivity, UserStreak, BirdCategory,
-    BirdCategoryAssignment, Article, UserBookmark, AIChat,
-    NearbySpot, SpotBirdSighting
+    BirdCategory, BirdCategoryAssignment, Article, UserBookmark, AIChat
 )
+
 
 class BirdImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -148,6 +152,7 @@ class BirdIdentificationRequestSerializer(serializers.Serializer):
     location_name = serializers.CharField(required=False, max_length=255)
 
     def validate(self, data):
+        print(f"Data in serializer: {data}")
         if not data.get('image') and not data.get('sound'):
             raise serializers.ValidationError(
                 "Either image or sound must be provided"
