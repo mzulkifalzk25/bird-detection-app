@@ -65,6 +65,7 @@ class BirdImage(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        app_label = 'birds'
         ordering = ['-is_primary', '-created_at']
 
 class BirdSound(models.Model):
@@ -74,9 +75,12 @@ class BirdSound(models.Model):
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        app_label = 'birds'
+
 class BirdIdentification(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    bird = models.ForeignKey(Bird, on_delete=models.SET_NULL, null=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='identifications', on_delete=models.CASCADE)
+    bird = models.ForeignKey(Bird, related_name='identifications', on_delete=models.SET_NULL, null=True)
 
     # Input data
     image_url = models.URLField(max_length=500, blank=True)
@@ -97,6 +101,7 @@ class BirdIdentification(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        app_label = 'birds'
         ordering = ['-created_at']
 
     def __str__(self):
@@ -110,14 +115,15 @@ class SimilarBird(models.Model):
     )
 
     class Meta:
+        app_label = 'birds'
         unique_together = ['bird', 'similar_to']
 
     def __str__(self):
         return f"{self.bird.name} similar to {self.similar_to.name}"
 
 class UserCollection(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    bird = models.ForeignKey(Bird, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='bird_user_collections', on_delete=models.CASCADE)
+    bird = models.ForeignKey(Bird, related_name='bird_usercollection_bird', on_delete=models.CASCADE)
     is_favorite = models.BooleanField(default=False)
     date_added = models.DateTimeField(auto_now_add=True)
     featured = models.BooleanField(default=False)
@@ -128,22 +134,6 @@ class UserCollection(models.Model):
 
     def __str__(self):
         return f"{self.user.username}'s collection - {self.bird.name}"
-
-class UserActivity(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    bird = models.ForeignKey(Bird, on_delete=models.CASCADE)
-    activity_type = models.CharField(max_length=50)  # e.g., "identification", "collection_add"
-    location_name = models.CharField(max_length=255, blank=True)
-    latitude = models.FloatField(null=True, blank=True)
-    longitude = models.FloatField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-created_at']
-        verbose_name_plural = "User activities"
-
-    def __str__(self):
-        return f"{self.user.username}'s activity - {self.activity_type}"
 
 class UserStreak(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='bird_streak')
@@ -162,16 +152,18 @@ class BirdCategory(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        app_label = 'birds'
         verbose_name_plural = "Bird categories"
 
     def __str__(self):
         return self.name
 
 class BirdCategoryAssignment(models.Model):
-    bird = models.ForeignKey(Bird, on_delete=models.CASCADE)
-    category = models.ForeignKey(BirdCategory, on_delete=models.CASCADE)
+    bird = models.ForeignKey(Bird, related_name='category_assignments', on_delete=models.CASCADE)
+    category = models.ForeignKey(BirdCategory, related_name='bird_assignments', on_delete=models.CASCADE)
 
     class Meta:
+        app_label = 'birds'
         unique_together = ['bird', 'category']
 
     def __str__(self):
@@ -188,46 +180,32 @@ class Article(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        app_label = 'birds'
+
     def __str__(self):
         return self.title
 
 class UserBookmark(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    article = models.ForeignKey(Article, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='bird_user_bookmarks', on_delete=models.CASCADE)
+    article = models.ForeignKey(Article, related_name='bird_article_bookmarks', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        app_label = 'birds'
         unique_together = ['user', 'article']
 
     def __str__(self):
         return f"{self.user.username}'s bookmark - {self.article.title}"
 
 class AIChat(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='ai_chats', on_delete=models.CASCADE)
     message = models.TextField()
     response = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        app_label = 'birds'
+
     def __str__(self):
         return f"{self.user.username}'s chat at {self.created_at}"
-
-class NearbySpot(models.Model):
-    name = models.CharField(max_length=255)
-    description = models.TextField()
-    latitude = models.FloatField()
-    longitude = models.FloatField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.name
-
-class SpotBirdSighting(models.Model):
-    spot = models.ForeignKey(NearbySpot, on_delete=models.CASCADE)
-    bird = models.ForeignKey(Bird, on_delete=models.CASCADE)
-    sighting_date = models.DateTimeField()
-    reported_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    notes = models.TextField(blank=True)
-
-    def __str__(self):
-        return f"{self.bird.name} at {self.spot.name}"

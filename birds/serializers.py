@@ -1,10 +1,11 @@
 from rest_framework import serializers
 from .models import (
     Bird, BirdImage, BirdSound, BirdIdentification, SimilarBird,
-    UserCollection, UserActivity, UserStreak, BirdCategory,
-    BirdCategoryAssignment, Article, UserBookmark, AIChat,
-    NearbySpot, SpotBirdSighting
+    BirdCategory, BirdCategoryAssignment, Article, UserBookmark, AIChat
 )
+from collection.models import UserCollection, UserStreak
+from recent_activity.models import UserActivity
+from nearby.models import NearbySpot, SpotBirdSighting
 
 class BirdImageSerializer(serializers.ModelSerializer):
     class Meta:
