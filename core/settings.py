@@ -216,13 +216,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
 ]
 
-# Cloudinary settings
-CLOUDINARY = {
-    'cloud_name': os.getenv('CLOUDINARY_CLOUD_NAME'),
-    'api_key': os.getenv('CLOUDINARY_API_KEY'),
-    'api_secret': os.getenv('CLOUDINARY_API_SECRET'),
-}
-
 # Google settings
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
