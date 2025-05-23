@@ -130,3 +130,7 @@ temp/
 # Logs
 logs/
 *.log
+
+# Ignore all .txt files except requirements.txt
+*.txt
+!requirements.txt
